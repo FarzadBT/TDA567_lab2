@@ -69,8 +69,7 @@ class LimitedStack{
     method Pop() returns (elem : int)
         requires Valid() && !Empty();
         ensures Valid() && !Full();
-        ensures elem == arr[old(top)];
-        ensures top == old(top) - 1;
+        ensures elem == arr[old(top)] && top == old(top) - 1;
 
         modifies this`top;
     {
@@ -80,9 +79,8 @@ class LimitedStack{
  
     method Shift()
         requires Valid() && !Empty();
-        ensures Valid();
+        ensures Valid() && top == old(top) - 1;
         ensures forall i : int :: 0 <= i < capacity - 1 ==> arr[i] == old(arr[i + 1]);
-        ensures top == old(top) - 1;
 
         modifies this.arr, this`top;
     {
@@ -102,13 +100,10 @@ class LimitedStack{
     //Push onto full stack, oldest element is discarded.
     method Push2(elem : int)
         requires Valid();
-        ensures Valid() && !Empty();
+        ensures Valid() && !Empty() && arr[top] == elem;
         ensures !old(Full()) ==> old(top) + 1 == top;
-        ensures old(Full()) ==> old(top) == top;
-        ensures arr[top] == elem;
-        ensures old(Full()) ==> (forall i :: 0 <= i < top ==> arr[i] == old(arr[i + 1]));
-        modifies this.arr, this`top;
-
+        ensures old(Full()) ==> old(top) == top && (forall i :: 0 <= i < top ==> arr[i] == old(arr[i + 1]));
+        
         modifies this.arr, this`top;
     {
         if(top == capacity-1) {
