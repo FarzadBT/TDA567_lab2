@@ -12,7 +12,16 @@ class Sorting {
     }
 
     predicate p'(a : seq<int>, b : seq<int>) {
-        
+        forall v :: count(a, v) == count(b, v)
+    }
+
+    function count(a: seq<int>, v: int): int 
+    decreases  a, v
+    {
+        if (|a| > 0) then
+            if (a[0] == v) then 1 + count(a[1..], v)
+            else count(a[1..], v)
+        else 0
     }
 
     ghost method sorted'ifsorted(ints : seq<int>)
