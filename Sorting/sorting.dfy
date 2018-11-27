@@ -38,13 +38,15 @@ class Sorting {
 
     }
 
-    method Main() {
-        assert multiset({1, 1, 2}) == multiset{1, 2};
-        assert multiset([1, 1, 2]) == multiset([1, 2, 1]);
+    method sort(arr : array<int>) 
+        requires arr.Length >= 2;
+        ensures p(arr[..], old(arr[..]));
+        ensures sorted(arr[..]);
+    {
+        
+    }
 
-        var m := map[];
-        m := m[1 := 3];
-        m := m[1 := m[1]+1];
-        assert m[1] == 4;
+    method Main() {
+
     }
 }
