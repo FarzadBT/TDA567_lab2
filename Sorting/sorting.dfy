@@ -46,6 +46,28 @@ class Sorting {
         
     }
 
+    method sortUnderSpecified(arr : array<int>) 
+        requires arr != null;
+        requires arr.Length >= 2;
+        ensures sorted(arr[..]);
+
+        modifies arr;
+    {
+        var l := arr.Length;
+        var z := 0;
+        while (z < l)
+            decreases  l - z
+            
+            invariant 0 <= z <= l;
+            invariant sorted(arr[..z])
+            invariant forall k :: 0 <= k <= z < l ==> arr[k] <= arr[z];
+            
+        {
+            arr[z] := z;
+            z := z + 1;
+        }
+    }
+
     method Main() {
 
     }
