@@ -24,28 +24,30 @@ class Sorting {
         else 0
     }
 
-    ghost method sorted'ifsorted(ints : seq<int>)
+    lemma sorted'ifsorted(ints : seq<int>)
         requires sorted(ints)
         ensures sorted'(ints)
     {
-
+        
     }
 
-    ghost method sortedifsorted'(ints : seq<int>)
+    lemma sortedifsorted'(ints : seq<int>)
         requires sorted'(ints)
         ensures sorted(ints)
     {
 
     }
 
-    method sort(arr : array<int>) 
+    /*method sort(arr : array<int>) 
         requires arr.Length >= 2;
         ensures p(arr[..], old(arr[..]));
         ensures sorted(arr[..]);
     {
         
-    }
+    }*/
 
+    // Question about why the invariant don't work
+    // From a quick  glance at the lab session it looked like it should work.
     method sortUnderSpecified(arr : array<int>) 
         requires arr != null;
         requires arr.Length >= 2;
@@ -59,16 +61,10 @@ class Sorting {
             decreases  l - z
             
             invariant 0 <= z <= l;
-            invariant sorted(arr[..z])
-            invariant forall k :: 0 <= k <= z < l ==> arr[k] <= arr[z];
-            
+            invariant forall k :: 0 <= k <= z ==> arr[k] <= arr[z];
         {
             arr[z] := z;
             z := z + 1;
         }
-    }
-
-    method Main() {
-
     }
 }
