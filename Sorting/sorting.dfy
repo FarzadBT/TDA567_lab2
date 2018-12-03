@@ -1,10 +1,10 @@
 class Sorting {
     predicate sorted1(ints : seq<int>) {
-        forall i :: 0 < i < |ints| ==> ints[i-1] < ints[i]
+        forall i :: 0 <= i < |ints| - 1 ==> ints[i] < ints[i+1]
     }
 
     predicate sorted2(ints : seq<int>) {
-        forall i :: |ints| > i > 0 ==> ints[i] > ints[i-1]
+        forall i,j :: 0 <= i < j < |ints| ==> ints[i] <= ints[j]
     }
 
     predicate p(a : seq<int>, b : seq<int>) {
