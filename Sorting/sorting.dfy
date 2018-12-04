@@ -1,10 +1,10 @@
 class Sorting {
-    predicate sorted(ints : seq<int>) {
-        forall i :: 0 < i < |ints| ==> ints[i-1] < ints[i]
+    predicate sorted1(ints : seq<int>) {
+        forall i :: 0 <= i < |ints| - 1 ==> ints[i] < ints[i+1]
     }
 
-    predicate sorted'(ints : seq<int>) {
-        forall i :: |ints| > i > 0 ==> ints[i] > ints[i-1]
+    predicate sorted2(ints : seq<int>) {
+        forall i,j :: 0 <= i < j < |ints| ==> ints[i] <= ints[j]
     }
 
     predicate p(a : seq<int>, b : seq<int>) {
@@ -24,16 +24,16 @@ class Sorting {
         else 0
     }
 
-    lemma sorted'ifsorted(ints : seq<int>)
-        requires sorted(ints)
-        ensures sorted'(ints)
+    lemma sorted2IfSorted1(ints : seq<int>)
+        requires sorted1(ints)
+        ensures sorted2(ints)
     {
         
     }
 
-    lemma sortedifsorted'(ints : seq<int>)
-        requires sorted'(ints)
-        ensures sorted(ints)
+    lemma sorted1IfSorted2(ints : seq<int>)
+        requires sorted1(ints)
+        ensures sorted2(ints)
     {
 
     }
@@ -51,7 +51,7 @@ class Sorting {
     method sortUnderSpecified(arr : array<int>) 
         requires arr != null;
         requires arr.Length >= 2;
-        ensures sorted(arr[..]);
+        ensures sorted1(arr[..]);
 
         modifies arr;
     {
