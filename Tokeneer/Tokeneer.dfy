@@ -1,5 +1,10 @@
 datatype Clearance = LOW | MID | HIGH
 
+predicate xor(bool1 : bool, bool2 : bool)
+{
+    (bool1 || !bool2) && !(bool1 && !bool2)
+}
+
 class Token {
     var userID : int;
     var clearance : Clearance;
@@ -21,7 +26,6 @@ class Token {
     {
         valid := false;
     }
-
 }
 
 class ID_Station {
@@ -50,6 +54,7 @@ class ID_Station {
         ensures userID == token.userID && checkClearance(token) ==> doorState;
         ensures userID != token.userID || !checkClearance(token) ==> alarmState && !token.valid;
         ensures !token.valid ==> !doorState;
+        ensures xor(doorState, doorState);
 
         modifies `doorState, `alarmState, token;
     {
@@ -94,8 +99,9 @@ class Enrollment_Station {
     method addUser(userID: int, c: Clearance) returns (t: Token)
         requires userID !in users;
         ensures userID in users;
-        ensures t.userID == userID && t.clearance == c;
+        ensures t.userID == userID && t.clearance == c && t.valid;
         ensures users[userID] == t;
+        ensures fresh(t);
 
         modifies `users;
     {
@@ -109,7 +115,5 @@ method Main() {
     var t1 := es.addUser(1, HIGH);
     var id1 := new ID_Station(LOW);
     id1.auth(t1, 1);
-
-
-
+    assert id1.doorState;
 }
