@@ -24,14 +24,14 @@ class Sorting {
         else 0
     }
 
-    lemma sorted2ifsorted1(ints : seq<int>)
+    lemma sorted2IfSorted1(ints : seq<int>)
         requires sorted1(ints)
         ensures sorted2(ints)
     {
         
     }
 
-    lemma sorted1ifsorted2(ints : seq<int>)
+    lemma sorted1IfSorted2(ints : seq<int>)
         requires sorted1(ints)
         ensures sorted2(ints)
     {
