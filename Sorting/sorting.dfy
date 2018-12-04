@@ -1,6 +1,6 @@
 class Sorting {
     predicate sorted1(ints : seq<int>) {
-        forall i :: 0 <= i < |ints| - 1 ==> ints[i] < ints[i+1]
+        forall i :: 0 <= i < |ints| - 1 ==> ints[i] <= ints[i+1]
     }
 
     predicate sorted2(ints : seq<int>) {
