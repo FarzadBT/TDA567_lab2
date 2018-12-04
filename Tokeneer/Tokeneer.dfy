@@ -1,96 +1,115 @@
-module Tokeneer {
-    datatype Clearance = INVALID | LOW | MID | HIGH
+datatype Clearance = LOW | MID | HIGH
 
-    class Token {
-        var userID : int;
-        var clearance : Clearance;
+class Token {
+    var userID : int;
+    var clearance : Clearance;
+    var valid: bool;
 
-        method Init(userID : int, clearance : Clearance)
-            requires userID >= 0 && clearance != INVALID
-            modifies this
-            ensures this.userID >= 0 && this.clearance != INVALID && this.userID == userID && this.clearance == clearance
-        {
-            this.userID := userID;
-            this.clearance := clearance;
-        }
-
-        method invalidate() 
-            ensures clearance == INVALID
-
-            modifies `clearance;
-        {
-            clearance := INVALID;
-        }
-
+    constructor(userID : int, clearance : Clearance)
+        ensures this.userID == userID && this.clearance == clearance && valid
+    {
+        this.userID := userID;
+        this.clearance := clearance;
+        valid := true;
     }
 
-    class ID_Station {
-        var doorID : int;
-        var clearance : Clearance;
-        var doorState : bool;
-        var alarmState : bool;
+    method invalidate()
+        requires valid
+        ensures !valid
 
-        method Init(doorID : int, clearance : Clearance)
-            requires doorID >= 0 && clearance != INVALID
-            modifies this
-            ensures this.doorID >= 0 && this.doorID == doorID && this.clearance != INVALID && this.clearance == clearance
-            ensures doorState == false && alarmState == false
-        {
-            this.doorID := doorID;
-            this.clearance := clearance;
-            doorState := false;
-            alarmState := false;
-        }
-
-        predicate checkClearance(t: Token) 
-            reads `clearance, t;
-        {
-            t.clearance == clearance || (t.clearance == HIGH && (clearance == LOW || clearance == MID)) || (t.clearance == MID && clearance == LOW)
-        }
-
-        method openDoor(token: Token, userID: int)
-            requires token != null;
-            requires !doorState;
-            ensures userID == token.userID && checkClearance(token) ==> doorState;
-            ensures userID != token.userID || !checkClearance(token) ==> alarmState && token.clearance == INVALID;
-            ensures token.clearance == INVALID ==> !doorState;
-
-            modifies `doorState, token;
-        {
-
-        }
-
-        method closeDoor()
-            requires doorState;
-            ensures !doorState;
-
-            modifies `doorState;
-        {
-
-        }
-
+        modifies `valid;
+    {
+        valid := false;
     }
 
-    class Enrollment_Station {
-        var users : seq<Token>;
+}
 
-        method Init()
-            modifies this
-        {
-            
-        }
+class ID_Station {
+    var clearance : Clearance;
+    var doorState : bool;
+    var alarmState : bool;
 
-        method addUser(userID: int, c: Clearance) returns (t: Token)
-            requires !(exists  i: int :: 0 <= i < |users| && users[i].userID == userID);
-            ensures t.userID == userID && t.clearance == c;
+    constructor(clearance : Clearance)
+        ensures this.clearance == clearance
+        ensures doorState == false && alarmState == false
+    {
+        this.clearance := clearance;
+        doorState := false;
+        alarmState := false;
+    }
 
-            modifies `users;
-        {
+    predicate checkClearance(t: Token)
+        reads `clearance, t;
+    {
+        t.clearance == clearance || (t.clearance == HIGH && (clearance == LOW || clearance == MID)) || (t.clearance == MID && clearance == LOW)
+    }
 
+    method auth(token: Token, userID: int)
+        requires token.valid;
+        requires !doorState;
+        ensures userID == token.userID && checkClearance(token) ==> doorState;
+        ensures userID != token.userID || !checkClearance(token) ==> alarmState && !token.valid;
+        ensures !token.valid ==> !doorState;
+
+        modifies `doorState, `alarmState, token;
+    {
+        var c: bool := token.clearance == clearance || (token.clearance == HIGH && (clearance == LOW || clearance == MID)) || (token.clearance == MID && clearance == LOW);
+        if userID == token.userID && c {
+            openDoor();
+        } else {
+            alarmState := true;
+            token.invalidate();
         }
     }
 
-    method Main() {
-        
+    method openDoor()
+        requires !doorState;
+        ensures doorState;
+
+        modifies `doorState;
+    {
+        doorState := true;
     }
+
+    method closeDoor()
+        requires doorState;
+        ensures !doorState;
+
+        modifies `doorState;
+    {
+        doorState := false;
+    }
+
+}
+
+class Enrollment_Station {
+    var users : map<int, Token>;
+
+    constructor()
+        ensures |users| == 0
+    {
+        users := map[];
+    }
+
+    method addUser(userID: int, c: Clearance) returns (t: Token)
+        requires userID !in users;
+        ensures userID in users;
+        ensures t.userID == userID && t.clearance == c;
+        ensures users[userID] == t;
+
+        modifies `users;
+    {
+        t := new Token(userID, c);
+        users := users[userID := t];
+    }
+}
+
+method Main() {
+    var es := new Enrollment_Station();
+    var t1 := es.addUser(1, HIGH);
+    var id1 := new ID_Station(LOW);
+    id1.auth(t1, 1);
+
+
+
 }
