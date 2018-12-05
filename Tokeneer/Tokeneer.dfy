@@ -175,19 +175,19 @@ method Main() {
 
     /* Invalid id */
     StationHigh.auth(UserHigh, 2);
-    assert UserHigh.valid;
+    assert !UserHigh.valid;
     assert !StationHigh.doorState;
     assert StationHigh.alarmState;
 
 
     StationMid.auth(UserMid, 3);
-    assert UserMid.valid;
+    assert !UserMid.valid;
     assert !StationMid.doorState;
     assert StationMid.alarmState;
 
 
     StationLow.auth(UserLow, 1);
-    assert UserLow.valid;
+    assert !UserLow.valid;
     assert !StationLow.doorState;
     assert StationLow.alarmState;
 }
