@@ -1,20 +1,16 @@
 datatype Clearance = LOW | MID | HIGH
 
-predicate xor(bool1 : bool, bool2 : bool)
-{
-    (bool1 || !bool2) && !(bool1 && !bool2)
-}
-
 class Token {
     var userID : int;
     var clearance : Clearance;
     var valid: bool;
 
-    constructor(userID : int, clearance : Clearance)
-        ensures this.userID == userID && this.clearance == clearance && valid
+    constructor(id : int, c : Clearance)
+        requires c == HIGH || c == MID || c == LOW;
+        ensures userID == id && clearance == c && valid
     {
-        this.userID := userID;
-        this.clearance := clearance;
+        userID := id;
+        clearance := c;
         valid := true;
     }
 
@@ -33,47 +29,47 @@ class ID_Station {
     var doorState : bool;
     var alarmState : bool;
 
-    constructor(clearance : Clearance)
-        ensures this.clearance == clearance
-        ensures doorState == false && alarmState == false
+    constructor(c : Clearance)
+        requires c == HIGH || c == MID || c == LOW;
+        ensures clearance == c
+        ensures !doorState && !alarmState
     {
-        this.clearance := clearance;
+        clearance := c;
         doorState := false;
         alarmState := false;
     }
 
-    predicate checkClearance(t: Token)
-        reads `clearance, t;
+    function method checkClearance(t: Token): bool
+        reads t, this`clearance;
     {
-        t.clearance == clearance || (t.clearance == HIGH && (clearance == LOW || clearance == MID)) || (t.clearance == MID && clearance == LOW)
+        t.clearance == clearance || ((t.clearance == HIGH && (clearance == LOW || clearance == MID)) || (t.clearance == MID && clearance == LOW))
+    }
+
+    function method checkID(t: Token, fingerprint: int): bool
+        reads t;
+    {
+        t.userID == fingerprint
     }
 
     method auth(token: Token, userID: int)
-        requires token.valid;
         requires !doorState;
-        ensures userID == token.userID && checkClearance(token) ==> doorState;
-        ensures userID != token.userID || !checkClearance(token) ==> alarmState && !token.valid;
-        ensures !token.valid ==> !doorState;
-        ensures xor(doorState, doorState);
+        ensures !old(token.valid) || !checkID(token, userID) ==> !doorState && !token.valid && alarmState;
+        ensures old(token.valid) && checkID(token, userID) && checkClearance(token) ==> doorState && token.valid && !alarmState;
+        ensures old(token.valid) && checkID(token, userID) && !checkClearance(token) ==> !doorState && token.valid && !alarmState;
 
-        modifies `doorState, `alarmState, token;
+        modifies `doorState, `alarmState, token, token`valid;
     {
-        var c: bool := token.clearance == clearance || (token.clearance == HIGH && (clearance == LOW || clearance == MID)) || (token.clearance == MID && clearance == LOW);
-        if userID == token.userID && c {
-            openDoor();
+        if (token.valid) {
+            if (!checkID(token, userID)) {
+                token.invalidate();
+                alarmState := true;
+                return;
+            }
+            doorState := checkClearance(token);
+            alarmState := false;
         } else {
             alarmState := true;
-            token.invalidate();
         }
-    }
-
-    method openDoor()
-        requires !doorState;
-        ensures doorState;
-
-        modifies `doorState;
-    {
-        doorState := true;
     }
 
     method closeDoor()
@@ -98,7 +94,8 @@ class Enrollment_Station {
 
     method addUser(userID: int, c: Clearance) returns (t: Token)
         requires userID !in users;
-        ensures userID in users;
+        requires c == HIGH || c == MID || c == LOW;
+        ensures users == old(users)[userID := t]
         ensures t.userID == userID && t.clearance == c && t.valid;
         ensures users[userID] == t;
         ensures fresh(t);
@@ -112,8 +109,85 @@ class Enrollment_Station {
 
 method Main() {
     var es := new Enrollment_Station();
-    var t1 := es.addUser(1, HIGH);
-    var id1 := new ID_Station(LOW);
-    id1.auth(t1, 1);
-    assert id1.doorState;
+    var StationHigh := new ID_Station(HIGH);
+    var StationMid := new ID_Station(MID);
+    var StationLow := new ID_Station(LOW);
+
+    var UserHigh := es.addUser(1, HIGH);
+    assert UserHigh.userID == 1;
+    assert UserHigh.clearance == HIGH;
+    assert UserHigh.valid;
+    assert es.users == map[1 := UserHigh];
+
+    var UserMid := es.addUser(2, MID);
+    assert UserMid.userID == 2;
+    assert UserMid.clearance == MID;
+    assert UserMid.valid;
+    assert es.users == map[1 := UserHigh, 2 := UserMid];
+
+    var UserLow := es.addUser(3, LOW);
+    assert UserLow.userID == 3;
+    assert UserLow.clearance == LOW;
+    assert UserLow.valid;
+    assert es.users == map[1 := UserHigh, 2 := UserMid, 3 := UserLow];
+
+    //We don't really know how to make the postconditions stronger for these following tests
+    
+    /* Valid open of door */
+    StationHigh.auth(UserHigh, 1);
+    assert UserHigh.valid;
+    assert StationHigh.doorState;
+    assert !StationHigh.alarmState;
+    StationHigh.closeDoor();
+    assert !StationHigh.doorState;
+    
+
+    StationMid.auth(UserMid, 2);
+    assert UserMid.valid;
+    assert StationMid.doorState;
+    assert !StationMid.alarmState;
+    StationMid.closeDoor();
+    assert !StationMid.doorState;
+
+
+    StationLow.auth(UserLow, 3);
+    assert UserLow.valid;
+    assert StationLow.doorState;
+    assert !StationLow.alarmState;
+    StationLow.closeDoor();
+    assert !StationLow.doorState;
+
+
+
+    /* Invalid clearance */
+    StationHigh.auth(UserMid, 2);
+    assert UserHigh.valid;
+    assert !StationHigh.doorState;
+    assert !StationHigh.alarmState;
+
+
+    StationMid.auth(UserLow, 3);
+    assert UserMid.valid;
+    assert !StationMid.doorState;
+    assert !StationMid.alarmState;
+
+
+
+    /* Invalid id */
+    StationHigh.auth(UserHigh, 2);
+    assert UserHigh.valid;
+    assert !StationHigh.doorState;
+    assert StationHigh.alarmState;
+
+
+    StationMid.auth(UserMid, 3);
+    assert UserMid.valid;
+    assert !StationMid.doorState;
+    assert StationMid.alarmState;
+
+
+    StationLow.auth(UserLow, 1);
+    assert UserLow.valid;
+    assert !StationLow.doorState;
+    assert StationLow.alarmState;
 }
